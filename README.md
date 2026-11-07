@@ -1,5 +1,7 @@
 # Mini #7 — Python ETL: Live Weather API → SQLite
 
+**Repo:** https://github.com/mhkh-stock/mini7-python-etl-api-sqlite
+
 **What it is:** a small, complete ETL pipeline. It fetches a 7-day
 forecast for 6 Pakistani cities from the Open-Meteo API (free, no key,
 no sign-up), flattens the JSON into tidy rows, loads them into SQLite,
