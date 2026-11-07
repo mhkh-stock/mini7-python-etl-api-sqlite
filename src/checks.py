@@ -3,6 +3,11 @@
 These assert STRUCTURE and INVARIANTS of a live pipeline — never fixed
 temperatures, because a re-run fetches a fresh forecast. If the API
 shape changes or the load corrupts, these fail loudly.
+
+The date checks anchor to the run_date STORED in the database — not to
+today's date — so they verify any stored run on any later day. A buyer
+who clones the repo tomorrow must see the same green run, not failures
+for a forecast that is simply a day old.
 """
 
 import json
@@ -38,18 +43,21 @@ check("42 forecast rows (6 cities x 7 days)",
 check("one run_date only (no mixed runs)",
       con.execute("SELECT COUNT(DISTINCT run_date) FROM fact_forecast")
       .fetchone()[0] == 1)
-check("run_date is today",
-      con.execute("SELECT DISTINCT run_date FROM fact_forecast")
-      .fetchone()[0] == date.today().isoformat())
+# Anchor every date check below to the run stored in the DB.
+run_date = con.execute("SELECT DISTINCT run_date FROM fact_forecast") \
+    .fetchone()[0]
+run_dt = date.fromisoformat(run_date)
+check("run summary names the same run_date as the database",
+      SUMMARY.exists() and f"({run_date})" in SUMMARY.read_text())
 check("7 distinct forecast dates per city",
       con.execute("SELECT MIN(cnt) FROM (SELECT COUNT(DISTINCT forecast_date) "
                   "AS cnt FROM fact_forecast GROUP BY city)").fetchone()[0] == 7)
-check("forecast window starts today",
+check("forecast window starts on run_date",
       con.execute("SELECT MIN(forecast_date) FROM fact_forecast")
-      .fetchone()[0] == date.today().isoformat())
+      .fetchone()[0] == run_date)
 check("forecast window ends 6 days out",
       con.execute("SELECT MAX(forecast_date) FROM fact_forecast")
-      .fetchone()[0] == (date.today() + timedelta(days=6)).isoformat())
+      .fetchone()[0] == (run_dt + timedelta(days=6)).isoformat())
 check("no nulls in any measure",
       con.execute("SELECT COUNT(*) FROM fact_forecast WHERE temp_max_c IS NULL "
                   "OR temp_min_c IS NULL OR precip_mm IS NULL "
@@ -68,9 +76,8 @@ check("no orphan rows (every city in dim_city)",
                   "ON c.city = f.city WHERE c.city IS NULL").fetchone()[0] == 0)
 
 # Raw responses on disk match what was loaded.
-today = date.today().isoformat()
-raw_files = sorted(RAW.glob(f"*_{today}.json"))
-check("6 raw API responses saved for today", len(raw_files) == 6,
+raw_files = sorted(RAW.glob(f"*_{run_date}.json"))
+check("6 raw API responses saved for this run", len(raw_files) == 6,
       f"got {len(raw_files)}")
 if len(raw_files) == 6:
     raw_rows = 0

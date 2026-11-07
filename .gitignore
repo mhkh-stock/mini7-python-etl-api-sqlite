@@ -1,0 +1,8 @@
+# Runner artifacts — rebuilt on every run, never committed.
+data/weather.db
+# Python bytecode.
+__pycache__/
+*.pyc
+# Local virtualenvs and secrets.
+.venv/
+.env

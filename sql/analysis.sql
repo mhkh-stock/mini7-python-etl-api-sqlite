@@ -20,7 +20,7 @@ SELECT city, ROUND(AVG(temp_max_c), 1) AS avg_max_c,
        ROUND(AVG(temp_min_c), 1) AS avg_min_c
 FROM fact_forecast GROUP BY city ORDER BY avg_max_c DESC;
 
--- 5. Rainy days per city (precipitation > 0).
-SELECT city, COUNT(*) AS rainy_days
-FROM fact_forecast WHERE precip_mm > 0
-GROUP BY city ORDER BY rainy_days DESC;
+-- 5. Rainy days per city (precipitation > 0). Every city is listed,
+--    even one with zero rainy days — a city must show 0, not vanish.
+SELECT city, SUM(CASE WHEN precip_mm > 0 THEN 1 ELSE 0 END) AS rainy_days
+FROM fact_forecast GROUP BY city ORDER BY rainy_days DESC, city;
